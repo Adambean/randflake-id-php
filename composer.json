@@ -1,0 +1,42 @@
+{
+    "name": "adambean/randflake-id-php",
+    "description": "A distributed, uniform, unpredictable, unique random ID generator: PHP implementation of Randflake ID and Sparx 64-bit.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "randflake",
+        "randflake-id",
+        "sparx64"
+    ],
+    "require": {
+        "php": "^8.1",
+        "paragonie/constant_time_encoding": "^3.1"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.93",
+        "phpstan/phpstan": "^2.1",
+        "phpstan/phpstan-deprecation-rules": "^2.0",
+        "phpstan/phpstan-strict-rules": "^2.0",
+        "phpunit/phpunit": "^9.6"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "autoload": {
+        "psr-4": {
+            "Adambean\\RandflakeId\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Adambean\\RandflakeId\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "cs:fix": "php-cs-fixer fix",
+        "stan": "phpstan analyse"
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
