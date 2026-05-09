@@ -46,7 +46,7 @@ php -r 'echo PHP_INT_SIZE;'
 Add a Composer package as is usual for PHP projects:
 
 ```sh
-composer require adambean/randflake-id
+composer require adambean/randflake-id-php
 ```
 
 ## Usage
