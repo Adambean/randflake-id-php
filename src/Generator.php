@@ -17,7 +17,6 @@ use Adambean\RandflakeId\Exception\RandflakeIdInvalidNodeException;
 use Adambean\RandflakeId\Exception\RandflakeIdInvalidSecretException;
 use Adambean\RandflakeId\Exception\RandflakeIdResourceExhaustedException;
 use Adambean\RandflakeId\Exception\RandflakeIdUnsupportedIntSizeException;
-use ParagonIE\ConstantTime\Base32Hex;
 
 /**
  * Randflake ID generator.
@@ -37,6 +36,7 @@ use ParagonIE\ConstantTime\Base32Hex;
  */
 final class Generator
 {
+    private const B32HEX_CHARS = "0123456789abcdefghijklmnopqrstuv";
     /*
      * -------------------------------------------------------------------------
      * Variables
@@ -149,7 +149,7 @@ final class Generator
             throw new RandflakeIdInvalidNodeException();
         }
 
-        if ("" === ($secret = trim($secret)) || strlen($secret) !== RandflakeId::SECRET_LENGTH) {
+        if (strlen($secret) !== RandflakeId::SECRET_LENGTH) {
             throw new RandflakeIdInvalidSecretException();
         }
 
@@ -264,6 +264,40 @@ final class Generator
             | $this->sequence;
 
         return $this->intToString($id);
+    }
+
+    /**
+     * Decode a mathematical Base32Hex string into an unsigned numeric string.
+     *
+     * @param non-empty-string $idEncoded
+     *
+     * @return numeric-string
+     */
+    private function decodeBase32HexToNumericString(string $idEncoded): string
+    {
+        RandflakeId::assertBase32HexStringId($idEncoded);
+
+        $idEncoded = strtolower(trim($idEncoded));
+        $idDecodedNum = "0";
+        $length = strlen($idEncoded);
+        for ($i = 0; $i < $length; $i++) {
+            $charCode = ord($idEncoded[$i]);
+            if ($charCode >= 48 && $charCode <= 57) {
+                $value = $charCode - 48;
+            } elseif ($charCode >= 97 && $charCode <= 118) {
+                $value = $charCode - 87;
+            } else {
+                throw new RandflakeIdDecodingErrorException("Invalid base32hex character.");
+            }
+
+            $idDecodedNum = bcadd(bcmul($idDecodedNum, "32", 0), strval($value), 0);
+        }
+
+        if (bccomp($idDecodedNum, $this->numMaxMinus1, 0) > 0) {
+            throw new RandflakeIdDecodingErrorException("Decoded ID is out of valid range.");
+        }
+
+        return $idDecodedNum;
     }
 
 
@@ -412,14 +446,7 @@ final class Generator
      */
     public function isEncodedStringIdValid(string $id): void
     {
-        RandflakeId::assertBase32HexStringId($id);
-
-        $idDecoded = Base32Hex::decode(strtolower($id));
-        if ("" === ($idDecoded = trim($idDecoded))) {
-            throw new RandflakeIdDecodingErrorException("Failed to decode ID.");
-        }
-
-        RandflakeId::addNullPaddingToPackedId($idDecoded);
+        $this->decodeBase32HexToNumericString($id);
     }
 
     /**
@@ -487,14 +514,14 @@ final class Generator
     {
         $this->isNumericStringIdValid($idRaw);
 
-        $idRawBytes = pack("J", $this->stringToInt($idRaw));
+        $idRawBytes = pack("P", $this->stringToInt($idRaw));
 
         $idEncrypted = $this->secretBox?->encrypt($idRawBytes);
         if (null === $idEncrypted) {
             throw new RandflakeIdEncryptionErrorException("Failed to encrypt ID.");
         }
 
-        $idEncryptedBytes = unpack("J", $idEncrypted);
+        $idEncryptedBytes = unpack("P", $idEncrypted);
         if (!is_array($idEncryptedBytes) || !isset($idEncryptedBytes[1]) || !is_int($idEncryptedBytes[1])) {
             throw new RandflakeIdEncryptionErrorException("Failed to unpack encrypted ID.");
         }
@@ -524,14 +551,14 @@ final class Generator
     {
         $this->isNumericStringIdValid($idEncrypted);
 
-        $idEncryptedBytes = pack("J", $this->stringToInt($idEncrypted));
+        $idEncryptedBytes = pack("P", $this->stringToInt($idEncrypted));
 
         $idDecrypted = $this->secretBox?->decrypt($idEncryptedBytes);
         if (null === $idDecrypted) {
             throw new RandflakeIdDecryptionErrorException("Failed to decrypt ID.");
         }
 
-        $idDecryptedBytes = unpack("J", $idDecrypted);
+        $idDecryptedBytes = unpack("P", $idDecrypted);
         if (!is_array($idDecryptedBytes) || !isset($idDecryptedBytes[1]) || !is_int($idDecryptedBytes[1])) {
             throw new RandflakeIdDecryptionErrorException("Failed to unpack decrypted ID.");
         }
@@ -557,14 +584,19 @@ final class Generator
     {
         $this->isNumericStringIdValid($idPlain);
 
-        if (bccomp($idPlain, $this->numMaxMinus1, 0) === 1) {
-            throw new RandflakeIdEncodingErrorException("ID is too large.");
+        if (bccomp($idPlain, "0", 0) === 0) {
+            return "0";
         }
 
-        $idPlainBytes = pack("J", $this->stringToInt($idPlain));
+        $idEncoded = "";
+        $idRemaining = $idPlain;
+        while (bccomp($idRemaining, "0", 0) > 0) {
+            $remainder = bcmod($idRemaining, "32", 0);
+            $idEncoded = self::B32HEX_CHARS[(int) $remainder] . $idEncoded;
+            $idRemaining = bcdiv($idRemaining, "32", 0);
+        }
 
-        $idEncoded = Base32Hex::encodeUnpadded($idPlainBytes);
-        if ("" === ($idEncoded = strtolower(trim($idEncoded)))) {
+        if ("" === $idEncoded) {
             throw new RandflakeIdEncodingErrorException("Failed to encode ID.");
         }
 
@@ -584,26 +616,7 @@ final class Generator
      */
     public function decodeId(string $idEncoded): string
     {
-        $this->isEncodedStringIdValid($idEncoded);
-
-        $idDecoded = Base32Hex::decode(strtolower($idEncoded));
-        if ("" === ($idDecoded = trim($idDecoded))) {
-            throw new RandflakeIdDecodingErrorException("Failed to decode ID.");
-        }
-
-        $idDecoded = RandflakeId::addNullPaddingToPackedId($idDecoded);
-
-        $idDecodedBytes = unpack("J", $idDecoded);
-        if (!is_array($idDecodedBytes) || !isset($idDecodedBytes[1]) || !is_int($idDecodedBytes[1])) {
-            throw new RandflakeIdDecodingErrorException("Failed to unpack decoded ID.");
-        }
-
-        $idDecodedNum = $this->intToString($idDecodedBytes[1]);
-        if (bccomp($idDecodedNum, "0", 0) < 0 || bccomp($idDecodedNum, $this->numMaxMinus1, 0) > 0) {
-            throw new RandflakeIdDecodingErrorException("Decoded ID is out of valid range.");
-        }
-
-        return $idDecodedNum;
+        return $this->decodeBase32HexToNumericString($idEncoded);
     }
 
     /**
