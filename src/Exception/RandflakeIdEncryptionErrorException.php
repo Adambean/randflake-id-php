@@ -9,7 +9,7 @@ final class RandflakeIdEncryptionErrorException extends RandflakeIdException
     public function __construct(string $message = "", int $code = 0, \Throwable|null $previous = null)
     {
         parent::__construct(
-            "" !== $message ? $message : "Encryption error occurred.",
+            "" !== $message ? $message : "Failed to encrypt ID.",
             $code,
             $previous
         );
