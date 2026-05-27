@@ -23,14 +23,14 @@ final class GeneratorTest extends TestCase
     /**
      * @return list<array{
      *  secret: non-empty-string,
-     *  node_id: int,
+     *  node_id: non-negative-int,
      *  lease_start: int,
      *  lease_end: int,
      *  timestamp: int,
-     *  sequence: int,
+     *  sequence: non-negative-int,
      *  raw_id: numeric-string,
      *  encrypted_id: numeric-string,
-     *  encoded_id: non-empty-string
+     *  encoded_id: non-empty-string,
      * }>
      */
     private static function officialTestVectors(): array
@@ -217,6 +217,7 @@ final class GeneratorTest extends TestCase
 
     /**
      * @param numeric-string $id
+     *
      * @return numeric-string
      */
     private static function signedVectorIdToUnsigned(string $id): string
