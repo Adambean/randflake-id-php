@@ -36,7 +36,17 @@ use Adambean\RandflakeId\Exception\RandflakeIdUnsupportedIntSizeException;
  */
 final class Generator
 {
+    /*
+     * -------------------------------------------------------------------------
+     * Constants
+     * -------------------------------------------------------------------------
+     */
+
+    /** @var string Character set used in Base32Hex strings. */
     private const B32HEX_CHARS = "0123456789abcdefghijklmnopqrstuv";
+
+
+
     /*
      * -------------------------------------------------------------------------
      * Variables
@@ -272,6 +282,9 @@ final class Generator
      * @param non-empty-string $idEncoded
      *
      * @return numeric-string
+     *
+     * @throws RandflakeIdDecodingErrorException
+     * If decoding fails or the decoded ID is out of valid range.
      */
     private function decodeBase32HexToNumericString(string $idEncoded): string
     {
