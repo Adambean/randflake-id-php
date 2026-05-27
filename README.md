@@ -14,8 +14,6 @@ This repository provides a library to:
 
 Includes a port of a library for the [SPARX](https://www.research.ed.ac.uk/en/publications/sparx-a-family-of-arx-based-lightweight-block-ciphers-provably-se/) 64-bit block cipher, used to encrypt raw ID numbers into unpredictable ID numbers.
 
-**⚠️ This library is currently a work in progress, and should not be used in a production environment until it has undergone peer review.**
-
 You may not need this library directly in your project:
 
 - For a [Symfony](https://symfony.com/) project with Doctrine ORM/DBAL integration, see my [Symfony bundle](https://github.com/adambean/randflake-id-bundle).
